@@ -15,9 +15,12 @@ drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
 #cv2.namedWindow("img", cv2.WINDOW_FREERATIO)
 #cv2.setWindowProperty("img", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 width = 1920
 height = 1080
+
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
 zoom_scale = 5  # decrease this value to decrease the margin
 transition_frames = 30  # You can modify `transition_frames` as needed
