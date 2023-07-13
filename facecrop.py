@@ -13,8 +13,11 @@ face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False,
 
 drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
 
-cap = cv2.VideoCapture(0)
-
+cap = cv2.VideoCapture(2)
+width = 1920
+height = 1080
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 zoom_scale = 2  # decrease this value to decrease the margin
 transition_frames = 30  # You can modify transition_frames as needed
 
