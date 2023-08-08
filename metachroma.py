@@ -15,7 +15,7 @@ cap.set(4,684)
 
 segmentor=SelfiSegmentation()
 
-buffersize=25*60 #amount of frames to store
+buffersize=25*2 #amount of frames to store
 
 q = Queue(maxsize = buffersize)
 

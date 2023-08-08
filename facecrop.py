@@ -1,7 +1,7 @@
 import cv2
 import mediapipe as mp
-import numpy as np
-from PIL import Image
+from classes.facecapture import facecapture
+from threading import Thread
 
 def crop_centered(img, final_resolution):
     height, width = img.shape[:2]
@@ -39,6 +39,15 @@ bbox_curr = [0, 0, cap.get(cv2.CAP_PROP_FRAME_WIDTH),
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
 
+FC=facecapture(face_mesh)
+
+fp = Thread(target=FC.faces_process_get)
+fp.start()
+
+
+#results=FC.get_crop_from_faces(img_rgb,face_mesh)
+
+
 while True:
     success, img = cap.read()
 
@@ -48,42 +57,74 @@ while True:
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=15, minSize=(30, 30))
 
-    for (x, y, w, h) in faces: 
+    for (x, y, w, h) in faces:
         pass
         #cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
-    if len(faces) > 0: 
+    if len(faces) > 0:
 
         all_x_values = [x, x + w]
         all_y_values = [y, y + h]
 
-        x_min, x_max, y_min, y_max = min(all_x_values), max(all_x_values), min(all_y_values), max(all_y_values)
-        w, h = x_max - x_min, y_max - y_min
+                for i in eye_points:
+                    x = int(face_landmarks.landmark[i].x * img_rgb.shape[1])
+                    y = int(face_landmarks.landmark[i].y * img_rgb.shape[0])
+                    x_values.append(x)
+                    y_values.append(y)
 
-        cx, cy = x_min + w // 2, y_min + h // 2
-        b_dim = max(w, h) * zoom_scale
-        bx, by = max(0, cx - b_dim // 2), max(0, cy - b_dim // 2)
-    else:
-        bx = 0
-        by = 0
-        b_dim = max(img.shape[1], img.shape[0])
+                all_x_values.extend(x_values)
+                all_y_values.extend(y_values)
 
-    if transition_frames > 0:
-        frame_count = (frame_count + 1) % transition_frames
-        bx = int((bbox_curr[0] * (transition_frames - frame_count) + bx * frame_count) / transition_frames)
-        by = int((bbox_curr[1] * (transition_frames - frame_count) + by * frame_count) / transition_frames)
-        b_dim = int((bbox_curr[2] * (transition_frames - frame_count) + b_dim * frame_count) / transition_frames)
+            x_min, x_max, y_min, y_max = min(all_x_values), max(all_x_values), min(all_y_values), max(all_y_values)
+            w, h = x_max - x_min, y_max - y_min
 
-    bbox_curr = [bx, by, b_dim]
+            cx, cy = x_min + w // 2, y_min + h // 2
+            b_dim = max(w, h) * zoom_scale
+            bx, by = max(0, cx - b_dim // 2), max(0, cy - b_dim // 2)
+        else:
+            bx = 0
+            by = 0
+            b_dim = max(img_rgb.shape[1], img_rgb.shape[0])
 
-    #cv2.rectangle(img, (bx, by), (bx+b_dim, by+b_dim), (0,255,0), 2)
-    #cv2.imshow('Bounding Box', img)
-    img_cropped = img[by:by+b_dim, bx:bx+b_dim]
-    img_resized = cv2.resize(img_cropped, (1920, 1080))
-    cv2.imshow("Image", img_resized)
+        if transition_frames > 0:
+            frame_count = (frame_count + 1) % transition_frames
+            bx = int((bbox_curr[0] * (transition_frames - frame_count) + bx * frame_count) / transition_frames)
+            by = int((bbox_curr[1] * (transition_frames - frame_count) + by * frame_count) / transition_frames)
+            b_dim = int((bbox_curr[2] * (transition_frames - frame_count) + b_dim * frame_count) / transition_frames)
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+        bbox_curr = [bx, by, b_dim]
+
+        img_cropped = img_rgb[by:by+b_dim, bx:bx+b_dim]
+        img_resized = cv2.resize(img_cropped, (width, height))
+        img_resized = cv2.cvtColor(img_resized, cv2.COLOR_RGB2BGR)  # Convert from RGB to BGR
+
+        ###
+        # aspect ratio of original image
+        aspratio_crop = img_cropped.shape[1] / img_cropped.shape[0]
+        # aspect ratio of desired size
+        aspratio_screen = width / height
+
+        if(aspratio_crop < aspratio_screen):
+            # resize width to fit
+            wtemp = width
+            htemp = int(width / aspratio_crop)
+        else:
+            htemp = height
+            wtemp = int(height * aspratio_crop)
+
+        img_temp = cv2.resize(img_cropped, (wtemp, htemp))
+
+        # Cropping the image
+        startRow = int(max(0,int((img_temp.shape[0]-height)/2)))
+        startCol = int(max(0,int((img_temp.shape[1]-width)/2)))
+        img_resized = img_temp[startRow:(startRow+height), startCol:(startCol+width)]
+
+        img_resized = cv2.cvtColor(img_resized, cv2.COLOR_RGB2BGR)  # Convert from RGB to BGR
+        ###
+        cv2.imshow("img", img_resized)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
 cap.release()
 cv2.destroyAllWindows()
