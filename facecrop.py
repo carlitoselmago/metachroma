@@ -3,6 +3,18 @@ import mediapipe as mp
 import numpy as np
 from PIL import Image
 
+def crop_centered(img, final_resolution):
+    height, width = img.shape[:2]
+
+    left = (width - final_resolution[0]) // 2
+    right = left + final_resolution[0]
+    top = (height - final_resolution[1]) // 2
+    bottom = top + final_resolution[1]
+
+    img = img[top:bottom, left:right]
+
+    return img
+
 mp_drawing = mp.solutions.drawing_utils
 mp_face_mesh = mp.solutions.face_mesh
 
@@ -13,40 +25,37 @@ face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False,
 
 drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
 
-cap = cv2.VideoCapture(2)
-width = 1920
-height = 1080
+cap = cv2.VideoCapture(0)
+width = 3840#1920
+height = 2160#1080
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 zoom_scale = 2  # decrease this value to decrease the margin
-transition_frames = 30  # You can modify transition_frames as needed
+transition_frames = 220  # You can modify transition_frames as needed
+frame_count = 0
 
 bbox_curr = [0, 0, cap.get(cv2.CAP_PROP_FRAME_WIDTH),
              cap.get(cv2.CAP_PROP_FRAME_HEIGHT)]   # Initial bounding box
-frame_count = 0
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
 
 while True:
     success, img = cap.read()
+
     if not success:
         break
 
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    results = face_mesh.process(img_rgb)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=15, minSize=(30, 30))
 
-    if results.multi_face_landmarks:
-        all_x_values, all_y_values = [], []
-        for face_landmarks in results.multi_face_landmarks:
-            eye_points = [33, 263, 466, 362]  # landmark numbers around the left & right eyes
-            x_values, y_values = [], []
+    for (x, y, w, h) in faces: 
+        pass
+        #cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
-            for i in eye_points:
-                x = int(face_landmarks.landmark[i].x * img.shape[1]) 
-                y = int(face_landmarks.landmark[i].y * img.shape[0])
-                x_values.append(x)
-                y_values.append(y)
+    if len(faces) > 0: 
 
-            all_x_values.extend(x_values)
-            all_y_values.extend(y_values)
+        all_x_values = [x, x + w]
+        all_y_values = [y, y + h]
 
         x_min, x_max, y_min, y_max = min(all_x_values), max(all_x_values), min(all_y_values), max(all_y_values)
         w, h = x_max - x_min, y_max - y_min
